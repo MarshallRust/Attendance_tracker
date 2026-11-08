@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Announcement Slides</title>
+<style>
+  body {
+    margin: 0;
+    padding: 24px 20px 48px;
+    background: #fff;
+    color: #111;
+    font: 16px/1.4 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .page {
+    max-width: 1300px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 380px minmax(0, 1fr);
+    gap: 36px;
+    align-items: start;
+  }
+  .preview { position: sticky; top: 16px; }
+  @media (max-width: 860px) { .page { grid-template-columns: minmax(0, 1fr); } .preview { position: static; } }
+  h1 { font-size: 22px; margin: 0 0 8px; color: #1F3A5F; }
+  label { display: block; font-weight: 600; margin: 18px 0 4px; }
+  select, input, textarea {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 8px;
+    font: inherit;
+    color: #111;
+    background: #fff;
+    border: 1px solid #b6bfcb;
+    border-radius: 6px;
+  }
+  select:focus, input:focus, textarea:focus { outline: 2px solid #1F3A5F; outline-offset: -1px; border-color: #1F3A5F; }
+  textarea { resize: vertical; }
+  h2 { font-size: 18px; margin: 28px 0 10px; color: #1F3A5F; }
+  .event { border: 1px solid #d5dbe3; border-radius: 6px; padding: 4px 12px 12px; margin-bottom: 10px; }
+  .event.heading { background: #f4f6f9; }
+  .event label { margin-top: 10px; font-size: 14px; }
+  .event-tools { display: flex; gap: 6px; justify-content: flex-end; margin-top: 10px; }
+  .event-tools button { padding: 3px 9px; font-size: 13px; }
+  .event-tools .remove { color: #b00020; border-color: #b00020; }
+  #slide { display: block; width: 100%; border: 1px solid #d5dbe3; border-radius: 6px; }
+  #slide:fullscreen { border: 0; object-fit: contain; background: #000; }
+  .buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  button {
+    padding: 8px 14px;
+    font: inherit;
+    color: #1F3A5F;
+    background: #fff;
+    border: 1px solid #1F3A5F;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  button.main { color: #fff; background: #1F3A5F; }
+  #status { margin: 10px 0 0; font-size: 14px; }
+  #status.error { color: #b00020; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div>
+    <h1>Announcement slides</h1>
+
+    <label for="cls">Class</label>
+    <select id="cls">
+      <option value="">Choose...</option>
+      <option value="eq">Elders Quorum</option>
+      <option value="rs">Relief Society</option>
+      <option value="ss">Sunday School</option>
+    </select>
+
+    <label for="qtype">Sign-in question</label>
+    <select id="qtype">
+      <option value="">None</option>
+      <option value="text">Short answer</option>
+      <option value="choice">Multiple choice</option>
+      <option value="scale">1 to 5 scale</option>
+    </select>
+    <div id="qfields" hidden>
+      <label for="qtext">Question</label>
+      <input id="qtext" maxlength="300">
+      <div id="choicefield" hidden>
+        <label for="choices">Choices, one per line</label>
+        <textarea id="choices" rows="4"></textarea>
+      </div>
+    </div>
+
+    <h2>Announcements</h2>
+    <div id="events"></div>
+    <div class="buttons">
+      <button id="addEvent" type="button">Add announcement</button>
+      <button id="addHeading" type="button">Add heading</button>
+    </div>
+  </div>
+
+  <div class="preview">
+    <img id="slide" alt="Slide preview">
+    <div class="buttons">
+      <button id="pdf" class="main" type="button">Download PDF</button>
+      <button id="png" type="button">Download PNG</button>
+      <button id="full" type="button">Full screen</button>
+    </div>
+    <p id="status"></p>
+  </div>
+</div>
+
+<script>
+const API = "https://script.google.com/macros/s/AKfycbwON7bL2n5wczgyRT1bKCiOeNSY4KCAVgAx4ffmUeMdQ19K6JUSiWoFRlb5DikMsJqV/exec";
+
+// qr is the module grid for API + "?class=xx", one string of 0s and 1s per row.
+const CLASSES = {
+  eq: { name: "Elders Quorum",  qr: "111111100111111010110110010000100100101111111,100000100110110011101001100000010001001000001,101110101101101101100001000011110101001011101,101110101101010001101001011001010001101011101,101110101101100001111111100001110011101011101,100000101001100010101000111000000100001000001,111111101010101010101010101010101010101111111,000000001110001111111000111111111100000000000,101111100000011100101111100000100010101111100,000011001001010000100111010011100001100010111,001011100110010000111001101000001111011101010,101101000101110101010001110111111100100110100,100110100011010001110100111000000010010000001,100010011111100101010101010000101001110101001,001000101010010100010010101000011111100011010,100111001110001001010001111111011100001001111,001111100011110011101010110000010001010000010,011000000100011010101011010001100001100011000,101001100000001110101001101000000001011101010,001011000110000001010101011010111111000101110,000011111010101011111111111100010010111110101,111110001000110000001000110111101001100011111,000110101110111111001010101010101101101010110,000010001001101000001000110111111100100011111,111011111101011111001111110000010010111111011,100110000000010100111111100011110000001001001,011000100111101001001100001010000010100011010,101110010000111100001111100111000100011011110,011110111111100000010001011001010110001011001,100001011111111100011000110101111001101001110,110101111110010010101110011110011011000101110,110011000111001101001011110001111001001101110,111101101000100111110100100001010110101110101,000110000000111111101011010001110001011001101,000010110101111100000101010010001110110110010,011110001110010001011010100111000011101101111,100110111100101101001111111000110000111111100,000000001110011010011000110110111001100011101,111111100010010110111010101101000011101010110,100000101010110101101000111111100101100011101,101110101100011100101111101000010111111111000,101110101100110011000101110011111000110000111,101110101001011111010010101010010111100001010,100000100100000100001010001011100001110110100,111111101110101101010011101001110011100010010" },
+  rs: { name: "Relief Society", qr: "111111101100111011101101001011111100101111111,100000101010101001110101111100001101001000001,101110101111111011110011010001100101001011101,101110100011011111100111010111011101101011101,101110101100101000111111101000111011101011101,100000100100100101101000111111000000001000001,111111101010101010101010101010101010101111111,000000000100010011001000100011100000000000000,100111111001001110111111110010110000110010111,001101000100011110101001011101101111101100110,000010101110111001110000100001000110010100011,101001000011110010010110110000111011100001100,111111111000001010110111100011011001001011010,111100000011111001011001001100110101101001010,001001111000000110000000111010001101110001000,111001000000001111011111110001010010000111110,010110101010110010100011111001011000011001011,110111000011010101101100010110100110100100000,111010111011010001110010110011011010000110001,010111001010011001001001000110100011011001101,010011111000111001101111101110000000111110111,110010001110111110001000111001100111100011110,001110101101110110001010100011100100101011111,000110001100101111001000110000111011100010111,100011111101100100011111101011001001111110000,111010001000101000100011111111101100010101010,001010101100111011011110011000010000110001000,100000011110010010000001101001001010010101111,010111110110101001010000010000011111000010000,100110011000111011011111110010111110101110110,011110100101011001110101000101000000011110101,011111011011001001010111101101100101010001101,111101111010111101100110110011000100111100111,101001001110100001100101011111111111010111100,000010111100110101001100011011000111111111011,011110001001010010011101100000000100101010111,100110100111110110011111100011101011111110111,000000001010000110001000101010100101100011110,111111101100000100101010111111010001101010100,100000101000111010101000110001101011100011100,101110101011010101101111100001011110111110001,101110101100010101000010110100111111110111111,101110100011000100001001110001001100111010001,100000100000011000010110010111111101101010111,111111101100111111000001111011100001110000000" },
+  ss: { name: "Sunday School",  qr: "111111100111110000110110010000100100101111111,100000100110110111101001100000010001001000001,101110101101101101100001000011110101001011101,101110101101010001101001011001010001101011101,101110101101100001111111100001110011101011101,100000101001100010101000111000000100001000001,111111101010101010101010101010101010101111111,000000001010001111011000111111111100000000000,101111100001011100101111100000100010101111100,000011001010110000100111010011100001100010111,001011100110110000111001101000001111011101010,101100000100010101010001110111111100100110100,100101100011010001111100111000000010010000001,100000011111100101000101010000101001110101001,001001101010010100010010101000011111100011010,100111001110001001010001111111011100001001111,000111100011100001101010110000010001010000010,010000000100000000101011010001100001100011000,100101100000001010101001101000000001011101010,000011011110000101010101011010111111000101110,000011111010101011111111111100010010111110101,111110001000110000001000110111101001100011111,000110101100111111001010101010101101101010110,000010001101101000001000110111111100100011111,111011111011111111001111110000010010111111011,100110000101110100111111100011110000001001001,011000110111101001001100001010000010100011010,101110000001111100001111100111000100011011110,011110111111100000011001011001010110001011001,100001011111111100011000110101111001101001110,100101111110001010101110011110011011000101110,110011000111011101001011110001111001001101110,100011101000100001110100100001010110101110101,011110000000100111101011010001110001011001101,000010110101111100000101010010001110110110010,011110001110010111011010100111000011101101111,100110111100101101001111111000110000111111100,000000001110011010011000110110111001100011101,111111100110010111011010101101000011101010110,100000101000110101001000111111100101100011101,101110101100111101001111101000010111111111000,101110101000010011000101110011111000110000111,101110101001111111010010101010010111100001010,100000100101100100001010001011100001110110100,111111101110101101010011101001110011100010010" }
+};
+
+const SAMPLE = [
+  { heading: "Stake Conference" },
+  { title: "Saturday Session", details: "Sat, Nov 14 · 6:30 – 8:00 PM\nAll invited" },
+  { title: "Sunday Leadership Session", details: "Sun, Nov 15 · 8:30 – 10:00 AM\nWard council members, full presidencies and spouses" },
+  { title: "Sunday General Session", details: "Sun, Nov 15 · 11:00 AM – 1:00 PM\nAll invited" },
+  { heading: "Stake Activities" },
+  { title: "Church Ball", details: "Starts Wed, Nov 11\nWednesday nights and Saturday mornings" },
+  { title: "Turkey Bowl Tournament", details: "Sat, Nov 21 · Everyone welcome\nSign up teams beforehand in the EQ GroupMe" }
+];
+
+const W = 1920, H = 1080, PANEL = 864;
+const NAVY = "#1F3A5F", GRAY = "#4A5568";
+const FONT = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+const $ = id => document.getElementById(id);
+const canvas = document.createElement("canvas");
+canvas.width = W;
+canvas.height = H;
+const ctx = canvas.getContext("2d");
+
+function load(key) {
+  try { return localStorage.getItem(key); } catch (e) { return null; }
+}
+function store(key, value) {
+  try { localStorage.setItem(key, value); } catch (e) {}
+}
+
+// Picks up whatever was typed into either of the older versions of this page.
+function savedEvents() {
+  try {
+    const saved = JSON.parse(load("slides-events"));
+    if (Array.isArray(saved)) return saved;
+  } catch (e) {}
+  try {
+    const old = JSON.parse(load("announcement-slide-maker-v2"));
+    if (old && Array.isArray(old.events)) {
+      return old.events.map(e => e.kind === "section" ? { heading: e.title } : { title: e.title, details: e.details || "", fine: e.fine || "" });
+    }
+  } catch (e) {}
+  const text = load("slides-text");
+  if (text) {
+    const events = [];
+    for (const chunk of text.split(/\n\s*\n/)) {
+      const lines = chunk.split("\n").map(l => l.trim()).filter(Boolean);
+      while (lines[0] && lines[0].startsWith("#")) events.push({ heading: lines.shift().replace(/^#+\s*/, "") });
+      if (lines.length) events.push({ title: lines[0], details: lines.slice(1).join("\n") });
+    }
+    return events;
+  }
+  return SAMPLE;
+}
+
+let events = savedEvents();
+$("cls").value = CLASSES[load("slides-class")] ? load("slides-class") : "";
+
+function esc(text) {
+  return String(text || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+}
+
+function renderEvents() {
+  $("events").innerHTML = events.map((ev, i) => {
+    const tools = `<div class="event-tools">
+        <button type="button" data-move="-1" ${i === 0 ? "disabled" : ""}>Move up</button>
+        <button type="button" data-move="1" ${i === events.length - 1 ? "disabled" : ""}>Move down</button>
+        <button type="button" class="remove" data-remove>Remove</button>
+      </div>`;
+    if ("heading" in ev) {
+      return `<div class="event heading" data-i="${i}">
+        <label for="h${i}">Heading</label>
+        <input id="h${i}" data-field="heading" value="${esc(ev.heading)}">
+        ${tools}</div>`;
+    }
+    return `<div class="event" data-i="${i}">
+      <label for="t${i}">Title</label>
+      <input id="t${i}" data-field="title" value="${esc(ev.title)}">
+      <label for="d${i}">Details, one per line</label>
+      <textarea id="d${i}" data-field="details" rows="3">${esc(ev.details)}</textarea>
+      <label for="f${i}">Small print (address, notes)</label>
+      <input id="f${i}" data-field="fine" value="${esc(ev.fine)}">
+      ${tools}</div>`;
+  }).join("");
+}
+
+$("events").addEventListener("input", e => {
+  const box = e.target.closest(".event");
+  if (!box || !e.target.dataset.field) return;
+  events[box.dataset.i][e.target.dataset.field] = e.target.value;
+  changed();
+});
+
+$("events").addEventListener("click", e => {
+  const box = e.target.closest(".event");
+  if (!box || e.target.tagName !== "BUTTON") return;
+  const i = Number(box.dataset.i);
+  if ("remove" in e.target.dataset) events.splice(i, 1);
+  if (e.target.dataset.move) {
+    const j = i + Number(e.target.dataset.move);
+    [events[i], events[j]] = [events[j], events[i]];
+  }
+  renderEvents();
+  changed();
+});
+
+function addEvent(ev, focusId) {
+  events.push(ev);
+  renderEvents();
+  changed();
+  const input = $(focusId + (events.length - 1));
+  input.focus();
+  input.select();
+}
+$("addEvent").addEventListener("click", () => addEvent({ title: "", details: "", fine: "" }, "t"));
+$("addHeading").addEventListener("click", () => addEvent({ heading: "" }, "h"));
+
+function wrap(text, maxWidth) {
+  const lines = [];
+  for (const para of String(text || "").split("\n")) {
+    let line = "";
+    for (const word of para.trim().split(/\s+/).filter(Boolean)) {
+      const test = line ? line + " " + word : word;
+      if (line && ctx.measureText(test).width > maxWidth) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = test;
+      }
+    }
+    if (line) lines.push(line);
+  }
+  return lines;
+}
+
+// Lays out the announcements at scale s and returns where they end. Only paints when paint is true.
+function announcements(s, paint) {
+  const x = PANEL + 100, tx = x + 50, width = W - 80 - tx;
+  let y = 70;
+  let first = true;
+
+  for (const ev of events) {
+    if ("heading" in ev) {
+      ctx.font = `bold ${66 * s}px ${FONT}`;
+      const lines = wrap(ev.heading, W - 80 - x);
+      if (!lines.length) continue;
+      if (!first) y += 10 * s;
+      if (paint) {
+        ctx.fillStyle = NAVY;
+        lines.forEach((line, n) => ctx.fillText(line, x, y + (60 + n * 76) * s));
+        ctx.fillRect(x, y + (lines.length * 76 + 6) * s, 180 * s, 7 * s);
+      }
+      y += (lines.length * 76 + 34) * s + 30 * s;
+      first = false;
+      continue;
+    }
+
+    ctx.font = `bold ${56 * s}px ${FONT}`;
+    const title = wrap(ev.title, width);
+    ctx.font = `${44 * s}px ${FONT}`;
+    const details = wrap(ev.details, width);
+    ctx.font = `${36 * s}px ${FONT}`;
+    const fine = wrap(ev.fine, width);
+    if (!title.length && !details.length && !fine.length) continue;
+
+    const height = (title.length * 68 + details.length * 56 + fine.length * 46 + 30 + (details.length || fine.length ? 6 : 0)) * s;
+    if (paint) {
+      ctx.fillStyle = NAVY;
+      ctx.fillRect(x, y, 10, height);
+      let line = y + 58 * s;
+      ctx.font = `bold ${56 * s}px ${FONT}`;
+      for (const t of title) { ctx.fillText(t, tx, line); line += 68 * s; }
+      line += 6 * s;
+      ctx.fillStyle = GRAY;
+      ctx.font = `${44 * s}px ${FONT}`;
+      for (const d of details) { ctx.fillText(d, tx, line); line += 56 * s; }
+      ctx.font = `${36 * s}px ${FONT}`;
+      for (const f of fine) { ctx.fillText(f, tx, line); line += 46 * s; }
+    }
+    y += height + 70 * s;
+    first = false;
+  }
+  return y - 70 * s;
+}
+
+function drawQR(rows, x, y, size) {
+  rows = rows.split(",");
+  const cell = Math.floor(size / (rows.length + 8));
+  const offset = Math.round((size - cell * rows.length) / 2);
+  ctx.fillStyle = "#000";
+  rows.forEach((row, r) => {
+    for (let c = 0; c < row.length; c++) {
+      if (row[c] === "1") ctx.fillRect(x + offset + c * cell, y + offset + r * cell, cell, cell);
+    }
+  });
+}
+
+function fitText(text, x, y, maxWidth, size, weight) {
+  do {
+    ctx.font = `${weight} ${size}px ${FONT}`;
+    size -= 2;
+  } while (ctx.measureText(text).width > maxWidth && size > 20);
+  ctx.fillText(text, x, y);
+}
+
+function draw() {
+  const cls = CLASSES[$("cls").value];
+
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#EEF2F7";
+  ctx.fillRect(0, 0, PANEL, H);
+
+  if (cls) {
+    ctx.fillStyle = NAVY;
+    ctx.textAlign = "left";
+    fitText(cls.name, 56, 78, PANEL - 112, 46, "bold");
+  }
+  ctx.textAlign = "center";
+  ctx.fillStyle = NAVY;
+  fitText("Please scan here", PANEL / 2, 168, PANEL - 80, 74, "bold");
+  ctx.fillStyle = GRAY;
+  fitText("for attendance", PANEL / 2, 226, PANEL - 80, 46, "normal");
+
+  const q = 700, qx = (PANEL - q) / 2, qy = H - 90 - q;
+  ctx.fillStyle = "#fff";
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(qx - 24, qy - 24, q + 48, q + 48, 18);
+  else ctx.rect(qx - 24, qy - 24, q + 48, q + 48);
+  ctx.fill();
+  if (cls) {
+    drawQR(cls.qr, qx, qy, q);
+  } else {
+    ctx.fillStyle = GRAY;
+    ctx.font = `44px ${FONT}`;
+    ctx.fillText("Choose your class", PANEL / 2, qy + q / 2);
+  }
+  ctx.textAlign = "left";
+
+  let s = 1;
+  while (announcements(s, false) > H - 50 && s > 0.5) s -= 0.02;
+  announcements(s, true);
+
+  $("slide").src = canvas.toDataURL("image/png");
+}
+
+let pending;
+function redraw() {
+  clearTimeout(pending);
+  pending = setTimeout(draw, 100);
+}
+
+function changed() {
+  store("slides-events", JSON.stringify(events));
+  redraw();
+}
+renderEvents();
+$("cls").addEventListener("change", () => { store("slides-class", $("cls").value); setStatus(""); draw(); });
+$("qtype").addEventListener("change", () => {
+  $("qfields").hidden = !$("qtype").value;
+  $("choicefield").hidden = $("qtype").value !== "choice";
+  if ($("qtype").value) $("qtext").focus();
+});
+
+function setStatus(text, isError) {
+  $("status").textContent = text;
+  $("status").className = isError ? "error" : "";
+}
+
+function questionToSave() {
+  const type = $("qtype").value;
+  if (!type) return null;
+  const text = $("qtext").value.trim();
+  if (!text) throw new Error("Type the question, or set the sign-in question to None.");
+  const options = $("choices").value.split("\n").map(o => o.trim()).filter(Boolean);
+  if (type === "choice" && options.length < 2) throw new Error("Add at least two choices.");
+  return { text, type, options: type === "choice" ? options : [] };
+}
+
+// Every download or full screen also saves this week's question (or clears it).
+function generate(action) {
+  const key = $("cls").value;
+  let question;
+  try {
+    if (!key) throw new Error("Choose your class first.");
+    question = questionToSave();
+  } catch (err) {
+    setStatus(err.message, true);
+    return;
+  }
+
+  clearTimeout(pending);
+  draw();
+  action();
+
+  setStatus("Saving question...");
+  fetch(API, { method: "POST", body: JSON.stringify({ class: key, question }) })
+    .then(r => r.json())
+    .then(res => {
+      if (!res.ok) throw new Error(res.error);
+      const name = CLASSES[key].name;
+      setStatus(question ? `${name} sign-in now asks: ${question.text}` : `${name} sign-in has no question this week.`);
+    })
+    .catch(err => setStatus(`The slide downloaded, but the question didn't save (${err.message}). Try again once you're online.`, true));
+}
+
+function fileName(ext) {
+  const today = new Date().toLocaleDateString("en-CA");
+  return `announcements-${$("cls").value}-${today}.${ext}`;
+}
+
+function download(url, name) {
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.append(a);
+  a.click();
+  a.remove();
+}
+
+// A PDF is just a wrapper around one JPEG of the slide, so it's written by hand instead of pulling in a library.
+function makePdf() {
+  const jpeg = Uint8Array.from(atob(canvas.toDataURL("image/jpeg", 1).split(",")[1]), c => c.charCodeAt(0));
+  const bytes = s => Uint8Array.from(s, c => c.charCodeAt(0));
+  const paint = `q ${W} 0 0 ${H} 0 0 cm /Im0 Do Q`;
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>`,
+    null,
+    `<< /Length ${paint.length} >>\nstream\n${paint}\nendstream`
+  ];
+
+  const parts = [bytes("%PDF-1.4\n")];
+  const offsets = [];
+  let length = parts[0].length;
+  const add = p => { parts.push(p); length += p.length; };
+
+  objects.forEach((obj, i) => {
+    offsets.push(length);
+    add(bytes(`${i + 1} 0 obj\n`));
+    if (obj === null) {
+      add(bytes(`<< /Type /XObject /Subtype /Image /Width ${W} /Height ${H} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpeg.length} >>\nstream\n`));
+      add(jpeg);
+      add(bytes("\nendstream"));
+    } else {
+      add(bytes(obj));
+    }
+    add(bytes("\nendobj\n"));
+  });
+
+  const xref = length;
+  let tail = "xref\n0 6\n0000000000 65535 f \n";
+  for (const o of offsets) tail += String(o).padStart(10, "0") + " 00000 n \n";
+  tail += `trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  add(bytes(tail));
+
+  return new Blob(parts, { type: "application/pdf" });
+}
+
+$("png").addEventListener("click", () => generate(() => download(canvas.toDataURL("image/png"), fileName("png"))));
+
+$("pdf").addEventListener("click", () => generate(() => {
+  const url = URL.createObjectURL(makePdf());
+  download(url, fileName("pdf"));
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}));
+
+$("full").addEventListener("click", () => generate(() => {
+  const img = $("slide");
+  const request = img.requestFullscreen || img.webkitRequestFullscreen;
+  if (!request) return setStatus("Full screen doesn't work in this browser. Download the slide instead.", true);
+  Promise.resolve(request.call(img)).catch(() => setStatus("Full screen was blocked. Download the slide instead.", true));
+}));
+
+draw();
+</script>
+</body>
+</html>
